@@ -1,0 +1,22 @@
+ItemMap(
+    items: {
+        "apple" : (
+            name: "Apple",
+            max_stack: 64,
+            description: "This is a very nice Apple",
+            item_type: Consumable(
+                Heal(20),
+            ),
+            tag: [Food],
+        ),
+        "cherry" : (
+            name: "Cherry",
+            max_stack: 64,
+            description: "This is a very nice Cherry",
+            item_type: Consumable(
+                Heal(10),
+            ),
+            tag: [Food],
+        )
+    }
+)

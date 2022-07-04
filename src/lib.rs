@@ -1,83 +1,90 @@
 mod itemslot;
+pub mod item_map;
 
 use self::itemslot::ItemSlot;
 use bevy::prelude::*;
-use std::fmt::Debug;
+use std::fs::File;
+use ron::de::from_reader;
 
-pub struct InventoryPlugin;
+pub trait InventoryItem {
+    fn name(&self) -> &'static str;
+    fn max_stack(&self) -> u32;
+}
+pub struct InventoryBuilder {
+    id: &'static str,
+    item_file: Option<&'static str>,
+    inventory_file: Option<&'static str>,
+}
+impl InventoryBuilder {
+    pub fn new(id: &'static str) -> Self {
+        InventoryBuilder {
+            id,
+            item_file: None,
+            inventory_file: None,
+        }
+    }
+    pub fn with_items(mut self, path: &'static str) -> Self{
+        self.item_file = Some(path);
+        self
+    }
+    pub fn with_inventory_file(mut self, path: &'static str) -> Self {
+        self.inventory_file = Some(path);
+        self
+    }
+}
 
-impl Plugin for InventoryPlugin {
-    fn build(&self, _app: &mut App) {}
+impl InventoryBuilder{
+    pub fn build(self) -> Inventory {
+        let mut item_slots = vec![None;10];
+        
+        if let Some(inv_file) = self.inventory_file {
+            let f = File::open(inv_file).expect("Failed opening file");
+            let inv: Vec<(String, usize)>  = match from_reader(f) {
+                Ok(x) => x,
+                Err(e) => {
+                    println!("Failed to load config: {}", e);
+                    std::process::exit(1);
+                }
+            };
+            for (index,item) in inv.into_iter().enumerate() {
+                item_slots[index] = Some(ItemSlot {
+                    item: item.0,
+                    count: item.1
+                })
+            }
+        }
+        Inventory {
+            item_slots,
+            active: 0,
+            _capacity_handler: CapacityHandler::None,
+        }
+    }
 }
 
 #[derive(Component)]
-pub struct Inventory<ItemType> {
-    item_slots: Vec<Option<ItemSlot<ItemType>>>,
+pub struct Inventory {
+    item_slots: Vec<Option<ItemSlot>>,
     active: usize,
     _capacity_handler: CapacityHandler,
+    // item_map: Handle<ItemMap>
 }
 
-impl<ItemType: PartialEq + Clone> Inventory<ItemType> {
-    pub fn add_item(&mut self, item: ItemType) {
-        for slot in self.item_slots.iter_mut() {
-            match slot {
-                Some(slot) => {
-                    if slot.max_stack > slot.count {
-                        slot.add();
-                        return;
-                    }
-                }
-                None => {}
-            }
-        }
-        let i = self.item_slots.iter().position(|x| x.is_none());
-        if let Some(i) = i {
-            self.item_slots[i] = Some(ItemSlot {
-                name: "apple",
-                count: 1,
-                item,
-                max_stack: 5,
-                icon: None
-            });
-        }
-    }
-    pub fn use_item(&mut self) -> Option<ItemType> {
-        let slot = &mut self.item_slots[self.active];
-
-        match slot {
-            Some(slot) => {
-                let item = slot.get();
-                if slot.is_empty() {
-                    self.item_slots[self.active] = None;
-                }
-                Some(item)
-            }
-            None => None,
-        }
-    }
-}
-
-impl<ItemType> Inventory<ItemType>
-where
-    ItemType: Debug,
-{
+impl Inventory{
     pub fn print(&self) {
         for item in &self.item_slots {
             println!("{:?}", item);
         }
+
     }
-}
-impl<ItemType: Clone> Default for Inventory<ItemType> {
-    fn default() -> Self {
-        Inventory {
-            item_slots: vec![None; 10],
-            active: 0,
-            _capacity_handler: CapacityHandler::Count(10),
-        }
+    pub fn get_items(&self) -> Vec<&String> {
+        self.item_slots.iter()
+        .filter(|slot| slot.is_some())
+        .map(|slot| &slot.as_ref().unwrap().item)
+        .collect()
     }
 }
 pub enum CapacityHandler {
-    _None,
-    _Weight(f32),
+    None,
+    Weight(f32),
     Count(u32),
 }

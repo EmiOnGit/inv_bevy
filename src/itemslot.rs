@@ -1,14 +1,20 @@
+use bevy::prelude::*;
 #[derive(Debug)]
 pub struct ItemSlot<ItemType> {
+    pub name: &'static str,
+    pub icon: Option<Handle<Image>>,
     pub count: usize,
     pub item: ItemType,
     pub max_stack: usize,
 }
+
 impl<ItemType: Clone> Clone for ItemSlot<ItemType> {
     fn clone(&self) -> Self {
         ItemSlot {
+            name: self.name,
             count: self.count,
             item: self.item.clone(),
+            icon: self.icon.clone(),
             max_stack: self.max_stack,
         }
     }

@@ -33,9 +33,11 @@ impl<ItemType: PartialEq + Clone> Inventory<ItemType> {
         let i = self.item_slots.iter().position(|x| x.is_none());
         if let Some(i) = i {
             self.item_slots[i] = Some(ItemSlot {
+                name: "apple",
                 count: 1,
                 item,
                 max_stack: 5,
+                icon: None
             });
         }
     }
